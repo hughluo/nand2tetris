@@ -28,4 +28,16 @@ CHIP Memory {
 
     PARTS:
     // Put your code here:
+    And (a=address[14], b=true, out=a14);// log
+    And (a=address[13], b=true, out=a13);// log
+
+    DMux (in=load, sel=address[14], a=ram, b=map);
+    RAM16K (in=in, load=ram, address=address[0..13], out=ramout);
+
+    DMux (in=map, sel=address[13], a=screen, b=keyboard);
+    Screen (in=in, load=screen, address=address[0..12], out=screenout);
+    Keyboard (out=keyboardout);
+
+    Mux16 (a=screenout, b=keyboardout, sel=address[13], out=mapout);
+    Mux16 (a=ramout, b=mapout, sel=address[14], out=out);
 }

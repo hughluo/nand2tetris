@@ -40,4 +40,48 @@ CHIP CPU {
 
     PARTS:
     // Put your code here:
+
+    //command pretty print
+
+
+    Mux16 (a=instruction, b=aluOut, sel=instruction[15], out=toRegA);
+
+    Not (in=instruction[15], out=isACommand);
+    Or (a=isACommand, b=instruction[5], out=codeRegA); // d1 == 1 => A = aluOut
+
+    ARegister (in=toRegA, load=codeRegA ,out=regAOut, out[0..14]=addressM);  // Register A
+
+    Mux16 (a=regAOut, b=inM, sel=instruction[12], out=AM); // sel code is 'a'
+
+    And (a=instruction[15], b=instruction[4], out=codeRegD); // c command && d2 == 1 => D = aluOut
+    DRegister (in=aluOut, load=codeRegD ,out=regDOut); 
+
+    // zx: c1, nx: c2, zy:c3, ny:c4, f: c5, no: c6
+
+    ALU (x=regDOut, y=AM, zx=instruction[11], nx=instruction[10], zy=instruction[9], ny=instruction[8], f=instruction[7], no=instruction[6], out=aluOut, out=outM, zr=aluZr, ng=aluNg); 
+
+    And (a=instruction[15], b=instruction[3], out=writeM); // C command && d3
+
+
+    // check jump conditions
+    Not (in=aluZr, out=aluNZr);
+    Not (in=aluNg, out=aluNNg);
+    
+    And (a=aluNZr, b=aluNNg, out=JGT);
+    And(a=aluZr, b=aluNNg, out=JEQ);
+    Or (a=aluZr, b=aluNNg, out=JGE);
+    And (a=aluNZr, b=aluNg, out=JLT);
+    And (a=aluNZr, b=true, out=JNE);
+    Or (a=aluZr, b=aluNg, out=JLE);
+
+    Mux (a=false, b=JGT, sel=instruction[0], out=j10j20);
+    Mux (a=JEQ, b=JGE, sel=instruction[0], out=j10j21);
+    Mux (a=JLT, b=JNE, sel=instruction[0], out=j11j20);
+    Mux (a=JLE, b=true, sel=instruction[0], out=j11j21);
+    Mux (a=j10j20, b=j10j21, sel=instruction[1], out=j10);
+    Mux (a=j11j20, b=j11j21, sel=instruction[1], out=j11);
+    Mux (a=j10, b=j11, sel=instruction[2], out=shouldJump);
+    And (a=shouldJump, b=instruction[15], out=doJump);
+
+    PC (in=regAOut, load=doJump, inc=true, reset=reset, out[0..14]=pc);
 }
